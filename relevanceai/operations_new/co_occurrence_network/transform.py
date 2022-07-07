@@ -170,7 +170,7 @@ class CoOccurNetTransform(TransformBase):
                         parent[j] = max_vertex_index
         return parent
 
-    def concurrence_matrix(self, top_ids, texts, df_table, word_dict):
+    def concurrence_matrix(self, top_ids, texts, word_dict):
         word_count_mat = []
         for i, text in enumerate(texts):
             row = [0] * self.number_of_concepts
@@ -221,9 +221,9 @@ class CoOccurNetTransform(TransformBase):
             doc_id_list = word_dict.get_docs(center_word)
             texts = [cleaned_texts[i] for i in doc_id_list]
             df_table = word_dict.update_df_table(center_word)
-        top_ids = sorted(df_table, key=df_table.get, reverse=True)[:self.number_of_concepts]
 
-        co_occur_mat = self.concurrence_matrix(top_ids, texts, df_table, word_dict)
+        top_ids = sorted(df_table, key=df_table.get, reverse=True)[:self.number_of_concepts]
+        co_occur_mat = self.concurrence_matrix(top_ids, texts, word_dict)
         mst = self.maximum_spanning_tree(co_occur_mat)
 
         vertexes = []
