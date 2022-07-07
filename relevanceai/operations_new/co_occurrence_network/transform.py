@@ -42,10 +42,10 @@ class WordDictionary():
                 self.id2docs[self.word2id[word]].append(doc_id)
 
     def get_ids(self, doc_id):
-        return self.doc2ids(doc_id)
+        return self.doc2ids[doc_id]
 
     def get_docs(self, word: str):
-        return self.id2docs(self.word2id[word])
+        return self.id2docs[self.word2id[word]]
 
     def get_word(self, id):
         return self.id2word[id]
@@ -170,6 +170,41 @@ class CoOccurNetTransform(TransformBase):
                         parent[j] = max_vertex_index
         return parent
 
+    def concurrence_matrix(self, top_ids, texts, df_table, word_dict):
+        word_count_mat = []
+        for i, text in enumerate(texts):
+            row = [0] * self.number_of_concepts
+            for word in text:
+                id = word_dict.word2id[word]
+                if id in top_ids:
+                    row[top_ids.index(id)] = 1
+            word_count_mat.append(row)
+        word_count_mat = np.array(word_count_mat)
+
+        return np.dot(word_count_mat.transpose(), word_count_mat)
+
+    def get_clusters_labels(self, mat):
+        labels = np.zeros((self.number_of_concepts, self.number_of_concepts), dtype=int)
+
+        for i in range(self.number_of_concepts):
+            labels[i, 0] = i
+        for i, merged in enumerate(
+                AgglomerativeClustering(affinity='precomputed', n_clusters=i, linkage='complete').fit(mat).children_):
+            new_id = i + self.number_of_concepts
+            for j in range(self.number_of_concepts):
+                if labels[j, i] in merged:
+                    labels[j, i + 1] = new_id
+                else:
+                    labels[j, i + 1] = labels[j, i]
+
+        for i in range(self.number_of_concepts):
+            unique_values = np.unique(labels[:, i])
+            label2label = dict(zip(unique_values, range(len(unique_values))))
+            for j, v in enumerate(labels[:, i]):
+                labels[j, i] = label2label[v]
+
+        return labels
+
     def transform(self, documents, text_field='content', stopwords_list=[], center_word=None):
         # For each document, update the field
         docs = [d[text_field] for d in documents]
@@ -186,49 +221,17 @@ class CoOccurNetTransform(TransformBase):
             doc_id_list = word_dict.get_docs(center_word)
             texts = [cleaned_texts[i] for i in doc_id_list]
             df_table = word_dict.update_df_table(center_word)
-
         top_ids = sorted(df_table, key=df_table.get, reverse=True)[:self.number_of_concepts]
 
-        word_count_mat = []
-        for i, text in enumerate(texts):
-            row = [0] * self.number_of_concepts
-            for word in text:
-                id = word_dict.word2id[word]
-                if id in top_ids:
-                    row[top_ids.index(id)] = 1
-            word_count_mat.append(row)
-        word_count_mat = np.array(word_count_mat)
-
-        concurrence_matrix = np.dot(word_count_mat.transpose(), word_count_mat)
-
-        mst = self.maximum_spanning_tree(concurrence_matrix)
-
-        mat = concurrence_matrix[0][0] - concurrence_matrix
+        co_occur_mat = self.concurrence_matrix(top_ids, texts, df_table, word_dict)
+        mst = self.maximum_spanning_tree(co_occur_mat)
 
         vertexes = []
         for i, id in enumerate(top_ids):
             v = {'word': word_dict.id2word[id], 'rank': i, 'count': df_table.get(id)}
             vertexes.append(v)
 
-        labels = np.zeros((self.number_of_concepts, self.number_of_concepts), dtype=int)
-
-        for i in range(self.number_of_concepts):
-            labels[i, 0] = i
-        for i, merged in enumerate(
-                AgglomerativeClustering(affinity='precomputed', n_clusters=i, linkage='complete').fit(mat).children_):
-            new_id = i + self.number_of_concepts
-            for j in range(self.number_of_concepts):
-                if labels[j, i] in merged:
-                    labels[j, i + 1] = new_id
-                else:
-                    labels[j, i + 1] = labels[j, i]
-
-        for i in range(self.number_of_concepts):
-            uniqueValues = np.unique(labels[:, i])
-            label2label = dict(zip(uniqueValues, range(len(uniqueValues))))
-            for j, v in enumerate(labels[:, i]):
-                labels[j, i] = label2label[v]
-
+        labels = self.get_clusters_labels(co_occur_mat[0][0] - co_occur_mat)
         for i in range(self.min_number_of_clusters, self.max_number_of_clusters + 1):
             for j in range(self.number_of_concepts):
                 vertexes[j]['label_{}'.format(i)] = labels[j, self.number_of_concepts - i]
