@@ -41,6 +41,9 @@ class WordDictionary():
                 self.doc2ids[doc_id].append(self.word2id[word])
                 self.id2docs[self.word2id[word]].append(doc_id)
 
+    def get_df_table(self):
+        return self.id2dfs
+
     def get_ids(self, doc_id):
         return self.doc2ids[doc_id]
 
@@ -52,9 +55,6 @@ class WordDictionary():
 
     def get_id(self, word: str):
         return self.word2id[word]
-
-    def get_df_table(self):
-        return self.id2dfs
 
     # return updated df_table based on only the documents contains word
     def update_df_table(self, word: str):
