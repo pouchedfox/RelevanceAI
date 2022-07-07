@@ -3,8 +3,6 @@ Build a concept graph based on the documents in your dataset
 """
 import sys
 
-try try try
-
 import numpy as np
 
 from sklearn.cluster import AgglomerativeClustering
