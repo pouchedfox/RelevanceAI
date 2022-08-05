@@ -55,7 +55,18 @@ class KeyWordBase(OperationBase):
         return [{"keyword": k[0], "score": k[1]} for k in keywords[: self.max_keywords]]
 
     def extract_keyphrases(self, texts):
-        return [self.extract_keyphrase(t) for t in texts]
+        #return [self.extract_keyphrase(t) for t in texts]
+        keywords_list = self.keyphrase_model.extract_keywords(
+            texts,
+            keyphrase_ngram_range=(self.lower_bound, self.upper_bound),
+            stop_words=self.stop_words,
+            diversity=self.diversity,
+        )
+        res = []
+        for keywords in keywords_list:
+            res.append([{"keyword": k[0], "score": k[1]} for k in keywords[: self.max_keywords]])
+        return res
+
 
     def transform(self, documents):
         # Extract the keywords from a bunch of documents
