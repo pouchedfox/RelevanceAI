@@ -16,6 +16,7 @@ class KeyWordBase(OperationBase):
         output_fields: list = None,
         stop_words: list = None,
         max_keywords: int = 1,
+        diversity: float = 0.7,
     ):
         self.fields = fields
         self.model_name = model_name
@@ -24,6 +25,7 @@ class KeyWordBase(OperationBase):
         self.upper_bound = upper_bound
         self.stop_words = stop_words
         self.max_keywords = max_keywords
+        self.diversity = diversity
 
     def _get_output_field(self, field):
         return field + "_keyphrase_"
@@ -48,6 +50,7 @@ class KeyWordBase(OperationBase):
             text,
             keyphrase_ngram_range=(self.lower_bound, self.upper_bound),
             stop_words=self.stop_words,
+            diversity=self.diversity,
         )
         return [{"keyword": k[0], "score": k[1]} for k in keywords[: self.max_keywords]]
 
