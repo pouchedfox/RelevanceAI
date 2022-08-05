@@ -16,6 +16,7 @@ class KeyWordOps(OperationAPIBase, KeyWordBase):
         output_fields: list = None,
         stop_words: list = None,
         max_keywords: int = 1,
+        diversity: float = 0.7,
         **kwargs
     ):
         self.fields = fields
@@ -25,4 +26,5 @@ class KeyWordOps(OperationAPIBase, KeyWordBase):
         self.upper_bound = upper_bound
         self.stop_words = stop_words
         self.max_keywords = max_keywords
+        self.diversity = diversity
         super().__init__(**kwargs)
